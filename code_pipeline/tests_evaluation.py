@@ -629,9 +629,9 @@ class OOBAnalyzer:
                 max_distances_starting_from[oob1['test id']] = distance
 
         mean_distance = np.mean([list(max_distances_starting_from.values())]) if len(
-            max_distances_starting_from) > 0 else np.NaN
+            max_distances_starting_from) > 0 else np.nan
         std_dev = np.std([list(max_distances_starting_from.values())]) if len(
-            max_distances_starting_from) > 0 else np.NaN
+            max_distances_starting_from) > 0 else np.nan
 
         self.logger.debug("Sparseness: Mean: %.3f, StdDev: %3f", mean_distance, std_dev)
 

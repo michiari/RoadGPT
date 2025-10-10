@@ -1,6 +1,7 @@
-python-dotenv==1.0.1
-openai==1.12.0
-shapely==1.8.0
-scipy==1.12.0
-descartes==1.1.0
-beamngpy==1.24
+python-dotenv
+openai
+shapely
+scipy
+descartes
+beamngpy
+click
