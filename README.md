@@ -21,8 +21,8 @@ After RoadGPT has exhausted the number of trys it will ask for a new prompt. You
 
 ## Example prompts:
 
-"A mountain road with serpentines" \
-"A road with 3 uphill turns and 2 downhill turns."
+"Create a mountain road with serpentines" \
+"Create a road with 3 uphill turns and 2 downhill turns."
 
 ## Publications
 

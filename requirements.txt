@@ -7,3 +7,4 @@ beamngpy
 click
 langchain
 langchain-openai
+langchain-ollama

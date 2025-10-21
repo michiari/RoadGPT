@@ -8,7 +8,8 @@ import sys
 import logging as log
 import csv
 
-from roadgpt.roadgpt_agent import RoadGPTAgent
+from roadgpt.openai_agent import OpenAIAgent
+from roadgpt.ollama_chat_agent import OllamaChatAgent
 from roadgpt.road_generator import RoadGenerator
 
 from code_pipeline.beamng_executor import BeamngExecutor
@@ -107,12 +108,12 @@ def get_script_path():
               help="Customize BeamNG executor by specifying the location of the folder "
                    "where levels, props, and other BeamNG-related data will be copied."
                    "** Use this to avoid spaces in URL/PATHS! **")
-@click.option('--model', required=False, type=click.Choice(["openai"], case_sensitive=False), default="openai")
+@click.option('--provider', required=False, type=click.Choice(["openai", "ollama"], case_sensitive=False), default="openai")
 # @click.option('--prompt', required=True, default=None, type=str)
 # @click.option('--repetitions', required=False, default=1, type=int,
 #               help="Number of times roads are generated with the given prompt.")
 @click.pass_context
-def generate(ctx, beamng_home, beamng_user, model):
+def generate(ctx, beamng_home, beamng_user, provider):
     ctx.ensure_object(dict)
 
     # Setup visualization
@@ -122,7 +123,14 @@ def generate(ctx, beamng_home, beamng_user, model):
     default_output_folder = os.path.join(get_script_path(), OUTPUT_RESULTS_TO)
     os.makedirs(default_output_folder, exist_ok=True)
     
-    roadgpt_agent = RoadGPTAgent(model)
+    match provider:
+        case "openai":
+            roadgpt_agent = OpenAIAgent()
+        case "ollama":
+            roadgpt_agent = OllamaChatAgent()
+        case _:
+            log.fatal("Unknown provider %s", provider)
+            sys.exit(2)
     prompt = input("Your road description (or exit): ")
     while prompt != "exit":
         # Create the unique folder that will host the results of this execution using the test generator data and
@@ -141,15 +149,13 @@ def generate(ctx, beamng_home, beamng_user, model):
         register_exit_fun(create_post_processing_hook(ctx, result_folder, executor))
         repetitions = int(input("How many times do you want to create a road with that prompt? "))
         for _ in range(repetitions):
-            response = roadgpt_agent.prompt(prompt)
-            segment_dict = response['structured_response']
+            segment_dict = roadgpt_agent.prompt(prompt)
             print(segment_dict)
             starting_point = segment_dict["starting_point"]
-            del segment_dict["starting_point"]
             theta = segment_dict["theta"]
-            del segment_dict["theta"]
+            segments = segment_dict["road_segments"]
 
-            generator = RoadGenerator(starting_point, theta, segment_dict)
+            generator = RoadGenerator(starting_point, theta, segments)
             generator.translate_to_nodes()
             try:
                 # Start the generation

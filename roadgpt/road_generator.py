@@ -21,15 +21,15 @@ class RoadGenerator:
     def translate_to_nodes(self):
         self.calculate_next_node(5, 0)
         for segment in self.segments:
-            if self.segments[segment]["direction"] == "straight":
-                self.calculate_next_node(self.segments[segment]["distance"], self.segments[segment]["incline"])
+            if segment["direction"] == "straight":
+                self.calculate_next_node(segment["distance"], segment["incline"])
                 continue
-            elif self.segments[segment]["direction"] == "left" and self.segments[segment]["turn_degrees"] < 0 or self.segments[segment]["direction"] == "right" and self.segments[segment]["turn_degrees"] > 0:
-                self.theta -= self.segments[segment]["turn_degrees"]
+            elif segment["direction"] == "left" and segment["turn_degrees"] < 0 or segment["direction"] == "right" and segment["turn_degrees"] > 0:
+                self.theta -= segment["turn_degrees"]
             else:
-                self.theta += self.segments[segment]["turn_degrees"]
+                self.theta += segment["turn_degrees"]
 
-            self.calculate_next_node(self.segments[segment]["distance"], self.segments[segment]["incline"])
+            self.calculate_next_node(segment["distance"], segment["incline"])
 
     
     def deg_to_rad(self, degrees):
@@ -107,4 +107,3 @@ class RoadRegenerator():
 
         import time
         time.sleep(10)
-
