@@ -1,19 +1,15 @@
+#!/usr/bin/env python3
+
 import click
-import importlib
 import traceback
 import time
 import os
 import sys
-import errno
 import logging as log
 import csv
 
-import matplotlib
-matplotlib.use('Agg')
-
-from dotenv import load_dotenv
-
-from roadgpt.road_generator import RoadGenerator, RoadRegenerator
+from roadgpt.roadgpt_agent import RoadGPTAgent
+from roadgpt.road_generator import RoadGenerator
 
 from code_pipeline.beamng_executor import BeamngExecutor
 from code_pipeline.visualization import RoadTestVisualizer
@@ -111,33 +107,22 @@ def get_script_path():
               help="Customize BeamNG executor by specifying the location of the folder "
                    "where levels, props, and other BeamNG-related data will be copied."
                    "** Use this to avoid spaces in URL/PATHS! **")
-@click.option('--model', required=False, type=click.Choice(["assistant", "chatgpt"], case_sensitive=False), default="chatgpt")
+@click.option('--model', required=False, type=click.Choice(["openai"], case_sensitive=False), default="openai")
 # @click.option('--prompt', required=True, default=None, type=str)
 # @click.option('--repetitions', required=False, default=1, type=int,
 #               help="Number of times roads are generated with the given prompt.")
 @click.pass_context
 def generate(ctx, beamng_home, beamng_user, model):
     ctx.ensure_object(dict)
-    # TODO Refactor by adding a create summary command and forwarding the output of this run to that command
 
-    road_visualizer = None
     # Setup visualization
     road_visualizer = RoadTestVisualizer(map_size=MAP_SIZE)
 
     # Setup folder structure by ensuring that the basic folder structure is there.
     default_output_folder = os.path.join(get_script_path(), OUTPUT_RESULTS_TO)
-    try:
-        os.makedirs(default_output_folder)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
+    os.makedirs(default_output_folder, exist_ok=True)
     
-    if model == "assistant":
-        from roadgpt.roadgpt_classes import RoadGPTAssistant
-        roadgpt = RoadGPTAssistant()
-    elif model == "chatgpt":
-        from roadgpt.roadgpt_classes import RoadGPT
-        roadgpt = RoadGPT()
+    roadgpt_agent = RoadGPTAgent(model)
     prompt = input("Your road description (or exit): ")
     while prompt != "exit":
         # Create the unique folder that will host the results of this execution using the test generator data and
@@ -145,34 +130,20 @@ def generate(ctx, beamng_home, beamng_user, model):
         # TODO Allow to specify a location for this folder and the run id
         timestamp_id = time.time() * 100000000 // 1000000
         result_folder = os.path.join(default_output_folder,
-                                    "_".join([str("roadgpt"), str("RoadGPT"), str(timestamp_id)]))
-
-        try:
-            os.makedirs(result_folder)
-        except OSError:
-            log.fatal("An error occurred during test generation")
-            traceback.print_exc()
-            sys.exit(2)
-        
+                                     "_".join(["roadgpt", "RoadGPT", str(timestamp_id)]))
+        os.makedirs(result_folder, exist_ok=True)
 
         # log.info("Outputting results to " + result_folder)
         executor = BeamngExecutor(result_folder, MAP_SIZE, oob_tolerance=OOB_TOLERANCE, max_speed_in_kmh=SPEED_LIMIT,
-                                    beamng_home=beamng_home, beamng_user=beamng_user, road_visualizer=road_visualizer)
-        # Register the shutdown hook for post processing results
+                                  beamng_home=beamng_home, beamng_user=beamng_user, road_visualizer=road_visualizer)
 
+        # Register the shutdown hook for post processing results
         register_exit_fun(create_post_processing_hook(ctx, result_folder, executor))
         repetitions = int(input("How many times do you want to create a road with that prompt? "))
-        for i in range(repetitions):
-            response = roadgpt.prompt(prompt)
-            index = response.find('{')
-            response = response[index:]
-            print(response)
-            try:
-                segment_dict = eval(response)
-                print(segment_dict)
-            except:
-                print("ChatGPT returned the wrong file type")
-                continue
+        for _ in range(repetitions):
+            response = roadgpt_agent.prompt(prompt)
+            segment_dict = response['structured_response']
+            print(segment_dict)
             starting_point = segment_dict["starting_point"]
             del segment_dict["starting_point"]
             theta = segment_dict["theta"]
@@ -197,5 +168,5 @@ def generate(ctx, beamng_home, beamng_user, model):
     post_process(ctx, result_folder, executor)
 
 
-if __name__=="__main__":
+if __name__== "__main__":
     generate()

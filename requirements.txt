@@ -5,3 +5,5 @@ scipy
 descartes
 beamngpy
 click
+langchain
+langchain-openai
