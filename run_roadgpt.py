@@ -138,7 +138,7 @@ def generate(ctx, beamng_home, beamng_user, model):
     elif model == "chatgpt":
         from roadgpt.roadgpt_classes import RoadGPT
         roadgpt = RoadGPT()
-    prompt = input("Your road description: ")
+    prompt = input("Your road description (or exit): ")
     while prompt != "exit":
         # Create the unique folder that will host the results of this execution using the test generator data and
         # a timestamp as id
@@ -191,7 +191,7 @@ def generate(ctx, beamng_home, beamng_user, model):
                 # Ensure the executor is stopped no matter what.
                 # TODO Consider using a ContextManager: With executor ... do
                 executor.close()
-        prompt=input("Road description")
+        prompt=input("Your road description (or exit): ")
 
     # We still need this here to post process the results if the execution takes the regular flow
     post_process(ctx, result_folder, executor)
