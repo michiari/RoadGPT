@@ -109,11 +109,11 @@ def get_script_path():
                    "where levels, props, and other BeamNG-related data will be copied."
                    "** Use this to avoid spaces in URL/PATHS! **")
 @click.option('--provider', required=False, type=click.Choice(["openai", "ollama"], case_sensitive=False), default="openai")
-# @click.option('--prompt', required=True, default=None, type=str)
-# @click.option('--repetitions', required=False, default=1, type=int,
-#               help="Number of times roads are generated with the given prompt.")
+@click.option('--prompt', required=False, default=None, type=str)
+@click.option('--repetitions', required=False, default=None, type=int,
+              help="Number of times roads are generated with the given prompt.")
 @click.pass_context
-def generate(ctx, beamng_home, beamng_user, provider):
+def generate(ctx, beamng_home, beamng_user, provider, prompt, repetitions):
     ctx.ensure_object(dict)
 
     # Setup visualization
@@ -131,8 +131,12 @@ def generate(ctx, beamng_home, beamng_user, provider):
         case _:
             log.fatal("Unknown provider %s", provider)
             sys.exit(2)
-    prompt = input("Your road description (or exit): ")
-    while prompt != "exit":
+
+    if prompt is None:
+        user_prompt = input("Your road description (or exit): ")
+    else:
+        user_prompt = prompt
+    while user_prompt != "exit":
         # Create the unique folder that will host the results of this execution using the test generator data and
         # a timestamp as id
         # TODO Allow to specify a location for this folder and the run id
@@ -147,9 +151,13 @@ def generate(ctx, beamng_home, beamng_user, provider):
 
         # Register the shutdown hook for post processing results
         register_exit_fun(create_post_processing_hook(ctx, result_folder, executor))
-        repetitions = int(input("How many times do you want to create a road with that prompt? "))
-        for _ in range(repetitions):
-            segment_dict = roadgpt_agent.prompt(prompt)
+
+        if repetitions is None:
+            user_repetitions = int(input("How many times do you want to create a road with that prompt? "))
+        else:
+            user_repetitions = repetitions
+        for _ in range(user_repetitions):
+            segment_dict = roadgpt_agent.prompt(user_prompt)
             print(segment_dict)
             starting_point = segment_dict["starting_point"]
             theta = segment_dict["theta"]
@@ -168,7 +176,11 @@ def generate(ctx, beamng_home, beamng_user, provider):
                 # Ensure the executor is stopped no matter what.
                 # TODO Consider using a ContextManager: With executor ... do
                 executor.close()
-        prompt=input("Your road description (or exit): ")
+
+        if prompt is None:
+            user_prompt = input("Your road description (or exit): ")
+        else:
+            break
 
     # We still need this here to post process the results if the execution takes the regular flow
     post_process(ctx, result_folder, executor)
