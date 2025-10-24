@@ -8,6 +8,7 @@ import sys
 import logging as log
 import csv
 
+from roadgpt.refining_agent import RefiningAgent
 from roadgpt.openai_agent import OpenAIAgent
 from roadgpt.ollama_chat_agent import OllamaChatAgent
 from roadgpt.road_generator import RoadGenerator
@@ -109,11 +110,12 @@ def get_script_path():
                    "where levels, props, and other BeamNG-related data will be copied."
                    "** Use this to avoid spaces in URL/PATHS! **")
 @click.option('--provider', required=False, type=click.Choice(["openai", "ollama"], case_sensitive=False), default="openai")
+@click.option('--strategy', required=False, type=click.Choice(["one-shot", "refining"], case_sensitive=False), default="refining")
 @click.option('--prompt', required=False, default=None, type=str)
 @click.option('--repetitions', required=False, default=None, type=int,
               help="Number of times roads are generated with the given prompt.")
 @click.pass_context
-def generate(ctx, beamng_home, beamng_user, provider, prompt, repetitions):
+def generate(ctx, beamng_home, beamng_user, provider, strategy, prompt, repetitions):
     ctx.ensure_object(dict)
 
     # Setup visualization
@@ -123,14 +125,25 @@ def generate(ctx, beamng_home, beamng_user, provider, prompt, repetitions):
     default_output_folder = os.path.join(get_script_path(), OUTPUT_RESULTS_TO)
     os.makedirs(default_output_folder, exist_ok=True)
     
-    match provider:
-        case "openai":
-            roadgpt_agent = OpenAIAgent()
-        case "ollama":
-            roadgpt_agent = OllamaChatAgent()
-        case _:
-            log.fatal("Unknown provider %s", provider)
-            sys.exit(2)
+    if strategy == "one-shot":
+        match provider:
+            case "openai":
+                roadgpt_agent = OpenAIAgent()
+            case "ollama":
+                roadgpt_agent = OllamaChatAgent()
+            case _:
+                log.fatal("Unknown provider %s", provider)
+                sys.exit(2)
+    else:  # refining
+        match provider:
+            case "openai":
+                log.fatal("Refining strategy is not supported with OpenAI provider yet.")
+                sys.exit(2)
+            case "ollama":
+                roadgpt_agent = RefiningAgent(map_size=MAP_SIZE)
+            case _:
+                log.fatal("Unknown provider %s", provider)
+                sys.exit(2)
 
     if prompt is None:
         user_prompt = input("Your road description (or exit): ")
@@ -158,6 +171,7 @@ def generate(ctx, beamng_home, beamng_user, provider, prompt, repetitions):
             user_repetitions = repetitions
         for _ in range(user_repetitions):
             segment_dict = roadgpt_agent.prompt(user_prompt)
+            print("LLM output:")
             print(segment_dict)
             starting_point = segment_dict["starting_point"]
             theta = segment_dict["theta"]

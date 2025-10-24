@@ -66,7 +66,7 @@ road_schema_array = {
                     },
                     "direction": {
                         "type": "string",
-                        "description": "Segment cardinal direction (e.g., 'N', 'S', 'E', 'W', or combinations such as 'NE')."
+                        "description": "Direction of the segment (one of 'left', 'right', 'straight')."
                     },
                     "incline": {
                         "type": "integer",
@@ -74,7 +74,7 @@ road_schema_array = {
                     },
                     "turn_degrees": {
                         "type": "integer",
-                        "description": "Turn in degrees from the previous direction (right/left, positive/right, negative/left)."
+                        "description": "Turn in degrees from the previous direction (positive = right, negative = left)."
                     }
                 },
                 "required": [
@@ -163,7 +163,7 @@ road_schema_old = {
         },
         "direction": {
           "type": "string",
-          "description": "Segment cardinal direction (e.g., 'N', 'S', 'E', 'W', or combinations such as 'NE')."
+          "description": "Direction of the segment (one of 'left', 'right', 'straight')."
         },
         "incline": {
           "type": "integer",
@@ -171,7 +171,7 @@ road_schema_old = {
         },
         "turn_degrees": {
           "type": "integer",
-          "description": "Turn in degrees from the previous direction (right/left, positive/right, negative/left)."
+          "description": "Turn in degrees from the previous direction (positive = right, negative = left)."
         }
       },
       "required": [

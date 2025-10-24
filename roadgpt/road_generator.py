@@ -8,7 +8,6 @@ from code_pipeline.tests_generation import RoadTestFactory
 
 class RoadGenerator:
     def __init__(self, starting_point, theta, segments):
-        print("RoadGenerator init")
         self.starting_point = self.set_starting_point(starting_point)
         self.segments = segments
         self.nodes = [self.starting_point]
@@ -54,12 +53,16 @@ class RoadGenerator:
         self.nodes.append(new_node)
 
         return new_node
-    
-    
+
+    def create_road_test(self):
+        return RoadTestFactory.create_road_test(self.nodes)
+
     def start(self, executor):
-        self.executor = executor
+        print("Road generation node list:")
         print(self.nodes)
-        the_test = RoadTestFactory.create_road_test(self.nodes)
+        
+        self.executor = executor
+        the_test = self.road_generator.create_road_test()
         print(the_test)
         # Send the test for execution
         test_outcome, description, execution_data = self.executor.execute_test(the_test)
