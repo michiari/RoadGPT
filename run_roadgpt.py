@@ -5,7 +5,7 @@ import traceback
 import time
 import os
 import sys
-import logging as log
+import logging
 import csv
 
 from roadgpt.refining_agent import RefiningAgent
@@ -19,6 +19,8 @@ from code_pipeline.tests_generation import TestGenerationStatistic
 from code_pipeline.test_generation_utils import register_exit_fun
 
 from code_pipeline.tests_evaluation import OOBAnalyzer
+
+log = logging.getLogger(__name__)
 
 OUTPUT_RESULTS_TO = 'results'
 MAP_SIZE = 1000

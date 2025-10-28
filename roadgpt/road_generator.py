@@ -1,10 +1,11 @@
 import math
-import numpy as np
 import json
+import logging
 
-from shapely.geometry import LineString
-from scipy.interpolate import splev, splprep
 from code_pipeline.tests_generation import RoadTestFactory
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
 
 class RoadGenerator:
     def __init__(self, starting_point, theta, segments):
@@ -63,16 +64,16 @@ class RoadGenerator:
         
         self.executor = executor
         the_test = self.create_road_test()
-        print(the_test)
+
         # Send the test for execution
         test_outcome, description, execution_data = self.executor.execute_test(the_test)
         # Plot the OOB_Percentage: How much the car is outside the road?
         oob_percentage = [state.oob_percentage for state in execution_data]
-        # log.info("Collected %d states information. Max is %.3f", len(oob_percentage), max(oob_percentage))
+        log.info("Collected %d states information. Max is %.3f", len(oob_percentage), max(oob_percentage))
 
         # # Print test outcome
-        # log.info("test_outcome %s", test_outcome)
-        # log.info("description %s", description)
+        log.info("test_outcome %s", test_outcome)
+        log.info("description %s", description)
 
         import time
         time.sleep(10)
