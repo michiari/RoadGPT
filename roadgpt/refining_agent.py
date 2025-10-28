@@ -24,7 +24,7 @@ class RefiningAgent:
     def __init__(self, map_size: int):
         self.model = ChatOllama(
             model="llama3.2",
-            temperature=0.8,
+            temperature=0.6,
         )
         self.validator = TestValidator(map_size)
         self.segment_agent = None
@@ -150,7 +150,7 @@ Here are some ground rules:
 - The car should face as many directions as possible while using your road
 - Each segment consists of the distance of the end point of the segment to the end point of the previous segment in meters, the direction (e.g. right turn), the incline in % and the degrees of the turn
 - Make sure that no point is out of bounds: every x and y value must be greater than 0 and lower than 200 (0 <= x,y <= 200)
-- The z axis can never be lower than -28.0 every segment needs!
+- The z axis can never be lower than -28.0!
 - Only return 'left', 'right' or 'straight' for the direction!
 - Only return numbers for the distance, incline and the degrees of the turn.
 - Write declines in height and the degrees of right turns as negative numbers!
