@@ -5,8 +5,7 @@ import traceback
 from typing import Tuple
 
 from self_driving.beamng_brewer import BeamNGBrewer
-# maps is a global variable in the module, which is initialized to Maps()
-from self_driving.beamng_tig_maps import maps, LevelsFolder
+from self_driving.beamng_tig_maps import get_maps, LevelsFolder
 from self_driving.beamng_waypoint import BeamNGWaypoint
 from self_driving.simulation_data import SimulationDataRecord, SimulationData
 from self_driving.simulation_data_collector import SimulationDataCollector
@@ -122,6 +121,7 @@ class BeamngExecutor(AbstractTestExecutor):
         beamng = brewer.beamng
         waypoint_goal = BeamNGWaypoint('waypoint_goal', get_node_coords(nodes[-1]))
 
+        maps = get_maps(self.beamng_home)
         # Override default configuration passed via ENV or hardcoded
         if self.beamng_user is not None:
             # Note This changed since BeamNG.research

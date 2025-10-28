@@ -69,10 +69,10 @@ class Maps:
     beamng_map: MapFolder
     source_map: MapFolder
 
-    def __init__(self):
+    def __init__(self, beamng_home):
         # TODO make relative to beamng_home
-        self.beamng_levels = LevelsFolder(os.path.join('/home', os.environ['USER'], r'Software/BeamNG.tech.v0.37.6.0/content/levels'))
-        self.source_levels = LevelsFolder(os.getcwd()+'/levels_template')
+        self.beamng_levels = LevelsFolder(os.path.join(beamng_home, 'content', 'levels'))
+        self.source_levels = LevelsFolder(os.path.join(os.getcwd(), 'levels_template'))
         self.source_map = self.source_levels.get_map('tig')
         self.beamng_map = self.beamng_levels.get_map('tig')
         self.never_logged_path = True
@@ -112,8 +112,9 @@ class Maps:
             shutil.copytree(src=self.source_map.path, dst=self.beamng_map.path)
 
 
-global maps
-maps = Maps()
-
-if __name__ == '__main__':
-    maps.install_map_if_needed()
+maps = None
+def get_maps(beamng_home):
+    global maps
+    if maps is None:
+        maps = Maps(beamng_home)
+    return maps
