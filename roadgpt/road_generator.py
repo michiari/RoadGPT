@@ -62,7 +62,7 @@ class RoadGenerator:
         print(self.nodes)
         
         self.executor = executor
-        the_test = self.road_generator.create_road_test()
+        the_test = self.create_road_test()
         print(the_test)
         # Send the test for execution
         test_outcome, description, execution_data = self.executor.execute_test(the_test)

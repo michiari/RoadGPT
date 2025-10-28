@@ -74,7 +74,6 @@ class RoadTestFactory:
         """
 
         def __init__(self, road_points):
-            print("RoadTest init")
             assert type(road_points) is list, "You must provide a list of road points to create a RoadTest"
             # assert all(len(i) == 2 for i in road_points), "Malformed list of road points"
             # The original input
@@ -94,7 +93,6 @@ class RoadTestFactory:
             self.validation_message = None
 
         def get_road_polygon(self):
-            print(self.road_polygon)
             return self.road_polygon
 
         def get_road_length(self, interpolate_road_points: bool = False):
@@ -110,7 +108,7 @@ class RoadTestFactory:
             theobj = {}
             # Statically generated attributes
             theobj['is_valid'] = self.is_valid
-            theobj['validation_message'] = self.validation_message
+            theobj['validation_message'] = str(self.validation_message)
             theobj['road_points'] = self.road_points
             theobj['interpolated_points'] = [(p[0], p[1], p[2]) for p in self.interpolated_points]
             # Dynamically generated attributes.

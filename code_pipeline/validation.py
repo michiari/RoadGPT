@@ -1,10 +1,50 @@
 from math import sqrt
+from enum import Enum
+import logging as log
 
 from self_driving.bbox import RoadBoundingBox
 import numpy as np
 
 # from code_pipeline.tests_generation import RoadTest
 from code_pipeline.tests_generation import RoadTestFactory
+
+
+class ValidationResult(Enum):
+    VALID = "valid"
+    WRONG_TYPE = "wrong_type"
+    NOT_ENOUGH_POINTS = "not_enough_points"
+    TOO_MANY_POINTS = "too_many_points"
+    NOT_INSIDE_MAP = "not_inside_map"
+    INTERSECTS_BOUNDARY = "intersects_boundary"
+    INVALID_POLYGON = "invalid_polygon"
+    NOT_MINIMUM_LENGTH = "not_minimum_length"
+    TOO_SHARP = "too_sharp"
+    TOO_STEEP = "too_steep"
+
+
+def get_validation_message(result: ValidationResult) -> str:
+    """
+    Returns a human-readable validation message for the given validation result.
+    
+    Args:
+        result: A ValidationResult enum value
+        
+    Returns:
+        A string describing the validation result
+    """
+    messages = {
+        ValidationResult.VALID: "Test is valid",
+        ValidationResult.WRONG_TYPE: "Wrong type",
+        ValidationResult.NOT_ENOUGH_POINTS: "Not enough road points.",
+        ValidationResult.TOO_MANY_POINTS: "The road definition contains too many points",
+        ValidationResult.NOT_INSIDE_MAP: "Not entirely inside the map boundaries",
+        ValidationResult.INTERSECTS_BOUNDARY: "Not entirely inside the map boundaries",
+        ValidationResult.INVALID_POLYGON: "The road is self-intersecting",
+        ValidationResult.NOT_MINIMUM_LENGTH: "The road is not long enough.",
+        ValidationResult.TOO_SHARP: "The road is too sharp",
+        ValidationResult.TOO_STEEP: "The road is too steep"
+    }
+    return messages.get(result, "Unknown validation result")
 
 
 def find_circle(p1, p2, p3):
@@ -80,8 +120,8 @@ class TestValidator:
 
         min_x, max_x = min(xs), max(xs)
         min_y, max_y = min(ys), max(ys)
-        print(min_x, max_x)
-        print(min_y, max_y)
+        log.info(f"X road extremes: {min_x} to {max_x}")
+        log.info(f"Y road extremes: {min_y} to {max_y}")
 
         return 0 < min_x or min_x > self.map_size and \
                0 < max_x or max_x > self.map_size and \
@@ -119,7 +159,7 @@ class TestValidator:
     def is_too_steep(self, the_test):
         if not isinstance(the_test, list):
             nodes = self.get_distance_altitude(the_test.interpolated_points)
-            print("DISTANCE NODES:", nodes)
+            # log.info("DISTANCE NODES:", nodes)
         else:
             nodes = the_test
         grouped_nodes = [nodes[pos:pos + 10] for pos in range(0, len(nodes), 10)]
@@ -137,65 +177,52 @@ class TestValidator:
 
         return False
 
-    def validate_test(self, the_test):
-
-        is_valid = True
-        validation_msg = ""
-        print("THE TEST:", the_test)
+    def validate_test(self, the_test) -> tuple[bool, ValidationResult]:
+        """
+        Validates a road test and returns validation status and result.
+        
+        Args:
+            the_test: The road test to validate
+            
+        Returns:
+            A tuple of (is_valid, validation_result) where is_valid is a boolean
+            and validation_result is a ValidationResult enum value
+        """
 
         if not self.is_right_type(the_test):
-            print(type(the_test))
-            print("right type")
-            is_valid = False
-            validation_msg = "Wrong type"
-            return is_valid, validation_msg
+            log.error("right type", type(the_test))
+            return False, ValidationResult.WRONG_TYPE
 
         if not self.is_enough_road_points(the_test):
-            print("enough road points")
-            is_valid = False
-            validation_msg = "Not enough road points."
-            return is_valid, validation_msg
+            log.error("enough road points")
+            return False, ValidationResult.NOT_ENOUGH_POINTS
 
         if self.is_too_many_points(the_test):
-            print("too many points")
-            is_valid = False
-            validation_msg = "The road definition contains too many points"
-            return is_valid, validation_msg
+            log.error("too many points")
+            return False, ValidationResult.TOO_MANY_POINTS
 
         if not self.is_inside_map(the_test):
-            print("inside map")
-            is_valid = False
-            validation_msg = "Not entirely inside the map boundaries"
-            return is_valid, validation_msg
+            log.error("inside map")
+            return False, ValidationResult.NOT_INSIDE_MAP
 
         if self.intersects_boundary(the_test):
-            print("itersects boundary")
-            is_valid = False
-            validation_msg = "Not entirely inside the map boundaries"
-            return is_valid, validation_msg
+            log.error("intersects boundary")
+            return False, ValidationResult.INTERSECTS_BOUNDARY
 
         if not self.is_valid_polygon(the_test):
-            print("is valid polygon")
-            is_valid = False
-            validation_msg = "The road is self-intersecting"
-            return is_valid, validation_msg
+            log.error("is valid polygon")
+            return False, ValidationResult.INVALID_POLYGON
 
         if not self.is_minimum_length(the_test):
-            print("is minimum length")
-            is_valid = False
-            validation_msg = "The road is not long enough."
-            return is_valid, validation_msg
+            log.error("is minimum length")
+            return False, ValidationResult.NOT_MINIMUM_LENGTH
 
         if self.is_too_sharp(the_test):
-            print("is too sharp")
-            is_valid = False
-            validation_msg = "The road is too sharp"
-            return is_valid, validation_msg
+            log.error("is too sharp")
+            return False, ValidationResult.TOO_SHARP
         
         if self.is_too_steep(the_test):
-            print("is too steep")
-            is_valid = False
-            validation_msg = "The road is too steep"
-            return is_valid, validation_msg
+            log.error("is too steep")
+            return False, ValidationResult.TOO_STEEP
 
-        return is_valid, validation_msg
+        return True, ValidationResult.VALID
