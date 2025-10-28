@@ -1,8 +1,10 @@
 .idea
 .venv
 .env
+.vscode
 **.pyc
 results
 simulations
 regenerate
 user
+*/__pycache__
