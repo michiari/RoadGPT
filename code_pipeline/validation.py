@@ -9,6 +9,8 @@ import numpy as np
 from code_pipeline.tests_generation import RoadTestFactory
 
 
+MIN_ELEVATION = -28
+
 class ValidationResult(Enum):
     VALID = "valid"
     WRONG_TYPE = "wrong_type"
@@ -42,7 +44,8 @@ def get_validation_message(result: ValidationResult) -> str:
         ValidationResult.INVALID_POLYGON: "The road is self-intersecting",
         ValidationResult.NOT_MINIMUM_LENGTH: "The road is not long enough.",
         ValidationResult.TOO_SHARP: "The road is too sharp",
-        ValidationResult.TOO_STEEP: "The road is too steep"
+        ValidationResult.TOO_STEEP: "The road is too steep",
+        ValidationResult.UNDERGROUND: "The road goes underground",
     }
     return messages.get(result, "Unknown validation result")
 
@@ -177,6 +180,12 @@ class TestValidator:
 
         return False
 
+    def goes_underground(self, the_test):
+        for point in the_test.road_points:
+            if point[2] < MIN_ELEVATION:
+                return True
+        return False
+
     def validate_test(self, the_test) -> tuple[bool, ValidationResult]:
         """
         Validates a road test and returns validation status and result.
@@ -224,5 +233,9 @@ class TestValidator:
         if self.is_too_steep(the_test):
             log.error("is too steep")
             return False, ValidationResult.TOO_STEEP
+
+        if self.goes_underground(the_test):
+            log.error("goes underground")
+            return False, ValidationResult.UNDERGROUND
 
         return True, ValidationResult.VALID

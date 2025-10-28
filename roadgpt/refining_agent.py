@@ -4,7 +4,7 @@ from langchain.agents.middleware import wrap_model_call, ModelRequest, ModelResp
 from langchain_ollama import ChatOllama
 from typing import Callable, Tuple
 
-from code_pipeline.validation import ValidationResult, TestValidator
+from code_pipeline.validation import MIN_ELEVATION, ValidationResult, TestValidator
 from roadgpt.road import RoadStart, RoadSegment
 from roadgpt.road_generator import RoadGenerator
 
@@ -131,6 +131,8 @@ class RefiningAgent:
                 return "The road has turns that are too sharp. Please return segment with smaller turn degrees."
             case ValidationResult.TOO_STEEP:
                 return "The road has inclines that are too steep"
+            case ValidationResult.UNDERGROUND:
+                return f"The road goes underground. Please provide a segment with an elevation higher than {MIN_ELEVATION}."
             case _:
                 return "An unknown validation error occurred"
 
