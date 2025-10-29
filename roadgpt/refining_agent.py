@@ -1,4 +1,7 @@
 from typing import Tuple
+import logging
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
 
 from code_pipeline.validation import MIN_ELEVATION, ValidationResult, TestValidator
 from roadgpt.road_generator import RoadGenerator
@@ -15,9 +18,9 @@ class RefiningAgent:
 
         segments = []
         for _ in range(6):
-            print("\n\nStarting new segment")
+            log.info("Querying new segment...")
             segments.append(self._get_segment(prompt, starting_point, segments, max_attempts))
-            print(segments[-1])
+            log.info(f"Segment result: {segments[-1]}")
 
         starting_point['road_segments'] = segments
         return starting_point
@@ -30,7 +33,7 @@ class RefiningAgent:
             { 'role': 'user', 'content': prompt }
         ]
         starting_point_result = self._invoke_starting_point_agent(messages)
-        print('Starting point: ', starting_point_result)
+        log.info(f"Starting point: {starting_point_result}")
         return starting_point_result
 
 
@@ -49,25 +52,27 @@ class RefiningAgent:
         else:
             messages.append({ 'role': 'user', 'content': "Please provide the first road segment." })
 
+        log.debug(f"Invoking segment agent with messages: {messages}")
         segment_result = self._invoke_segment_agent(messages)
-        print(f"Segment result: {segment_result}")
+        log.info(f"Segment result: {segment_result}")
         segments = previous_segments + [segment_result]
 
         is_valid, reason = self._validate(starting_point, segments)
         attempts = 0
         while not is_valid and attempts < max_attempts:
-            print("Segment generated an invalid road:", reason.value)
-            print(f"Refining segment (attempt {attempts + 1})...")
+            log.info(f"Segment generated an invalid road: {reason.value}")
+            log.info(f"Refining segment (attempt {attempts + 1})...")
             refinement_messages = messages + [
                 { 'role': 'assistant', 'content': f"Previously generated segments: {segments}." },
                 { 'role': 'user', 'content': f"The previous segment resulted in an invalid road because {self._get_correction_message(reason)}. Please provide a corrected road segment." }
             ]
+            log.debug(f"Invoking segment agent with messages: {refinement_messages}")
             refined_segment_result = self._invoke_segment_agent(refinement_messages)
-            print(refined_segment_result)
+            log.info(f"Refined segment result: {refined_segment_result}")
             segments[-1] = refined_segment_result
             is_valid, reason = self._validate(starting_point, segments)
             attempts += 1
-            print("After refinement, is the road valid?", is_valid, reason.value)
+            log.info(f"After refinement, is the road valid? {is_valid}, {reason.value}")
 
         if not is_valid:
             raise ValueError(f"Failed to generate a valid road after refining the segment {max_attempts} times.")
@@ -89,19 +94,19 @@ class RefiningAgent:
             case ValidationResult.TOO_MANY_POINTS:
                 return "The road has too many points"
             case ValidationResult.NOT_INSIDE_MAP:
-                return "The road goes outside of the map boundaries because the segment is too long. Please return a shorter segment."
+                return "The road goes outside of the map boundaries because the segment is too long. Please return a shorter segment"
             case ValidationResult.INTERSECTS_BOUNDARY:
-                return "The road intersects the map boundary because the segment is too long. Please return a shorter segment."
+                return "The road intersects the map boundary because the segment is too long. Please return a shorter segment"
             case ValidationResult.INVALID_POLYGON:
                 return "The road polygon is invalid"
             case ValidationResult.NOT_MINIMUM_LENGTH:
-                return "The road is not long enough. Please return a longer segment."
+                return "The road is not long enough. Please return a longer segment"
             case ValidationResult.TOO_SHARP:
-                return "The road has turns that are too sharp. Please return segment with smaller turn degrees."
+                return "The road has turns that are too sharp. Please return segment with smaller turn degrees"
             case ValidationResult.TOO_STEEP:
                 return "The road has inclines that are too steep"
             case ValidationResult.UNDERGROUND:
-                return f"The road goes underground. Please provide a segment with an elevation higher than {MIN_ELEVATION}."
+                return f"The road goes underground: please provide a segment with an elevation higher than {MIN_ELEVATION}"
             case _:
                 return "An unknown validation error occurred"
 
