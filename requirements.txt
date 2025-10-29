@@ -8,3 +8,4 @@ click
 langchain
 langchain-openai
 langchain-ollama
+llama-cpp-python

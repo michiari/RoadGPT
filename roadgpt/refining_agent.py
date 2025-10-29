@@ -1,7 +1,6 @@
 from typing import Tuple
 import logging
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
 
 from code_pipeline.validation import MIN_ELEVATION, ValidationResult, TestValidator
 from roadgpt.road_generator import RoadGenerator
@@ -63,8 +62,7 @@ class RefiningAgent:
             log.info(f"Segment generated an invalid road: {reason.value}")
             log.info(f"Refining segment (attempt {attempts + 1})...")
             refinement_messages = messages + [
-                { 'role': 'assistant', 'content': f"Previously generated segments: {segments}." },
-                { 'role': 'user', 'content': f"The previous segment resulted in an invalid road because {self._get_correction_message(reason)}. Please provide a corrected road segment." }
+                { 'role': 'user', 'content': f"The last segment you generated {segments[-1]} resulted in an invalid road because {self._get_correction_message(reason)}. Please provide a corrected road segment." }
             ]
             log.debug(f"Invoking segment agent with messages: {refinement_messages}")
             refined_segment_result = self._invoke_segment_agent(refinement_messages)
@@ -94,9 +92,9 @@ class RefiningAgent:
             case ValidationResult.TOO_MANY_POINTS:
                 return "The road has too many points"
             case ValidationResult.NOT_INSIDE_MAP:
-                return "The road goes outside of the map boundaries because the segment is too long. Please return a shorter segment"
+                return "The road goes outside of the map boundaries because the segment is too long. Please return a segment with a shorter distance"
             case ValidationResult.INTERSECTS_BOUNDARY:
-                return "The road intersects the map boundary because the segment is too long. Please return a shorter segment"
+                return "The road intersects the map boundary because the segment is too long. Please return a segment with a shorter distance"
             case ValidationResult.INVALID_POLYGON:
                 return "The road polygon is invalid"
             case ValidationResult.NOT_MINIMUM_LENGTH:

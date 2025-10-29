@@ -8,7 +8,8 @@ import sys
 import logging
 import csv
 
-from roadgpt.refining_agent import RefiningAgent
+from roadgpt.llamacpp_refining_agent import LlamaCppRefiningAgent
+from roadgpt.ollama_refining_agent import OllamaRefiningAgent
 from roadgpt.openai_agent import OpenAIAgent
 from roadgpt.ollama_chat_agent import OllamaChatAgent
 from roadgpt.road_generator import RoadGenerator
@@ -111,14 +112,21 @@ def get_script_path():
               help="Customize BeamNG executor by specifying the location of the folder "
                    "where levels, props, and other BeamNG-related data will be copied."
                    "** Use this to avoid spaces in URL/PATHS! **")
-@click.option('--provider', required=False, type=click.Choice(["openai", "ollama"], case_sensitive=False), default="openai")
+@click.option('--provider', required=False, type=click.Choice(["openai", "ollama", "llama_cpp"], case_sensitive=False), default="openai")
+@click.option('--model-path', required=False, default=None, type=str,
+              help="Path to the local LLaMA.cpp model file. Required if provider is 'llama_cpp'.")
 @click.option('--strategy', required=False, type=click.Choice(["one-shot", "refining"], case_sensitive=False), default="refining")
 @click.option('--prompt', required=False, default=None, type=str)
 @click.option('--repetitions', required=False, default=None, type=int,
               help="Number of times roads are generated with the given prompt.")
+@click.option('--verbose', is_flag=True, help="Enables verbose logging.")
 @click.pass_context
-def generate(ctx, beamng_home, beamng_user, provider, strategy, prompt, repetitions):
+def generate(ctx, beamng_home, beamng_user, provider, model_path, strategy, prompt, repetitions, verbose):
     ctx.ensure_object(dict)
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.WARNING)
 
     # Setup visualization
     road_visualizer = RoadTestVisualizer(map_size=MAP_SIZE)
@@ -133,6 +141,9 @@ def generate(ctx, beamng_home, beamng_user, provider, strategy, prompt, repetiti
                 roadgpt_agent = OpenAIAgent()
             case "ollama":
                 roadgpt_agent = OllamaChatAgent()
+            case "llama_cpp":
+                log.fatal("One-shot strategy is not supported with LlamaCpp provider yet.")
+                sys.exit(2)
             case _:
                 log.fatal("Unknown provider %s", provider)
                 sys.exit(2)
@@ -142,7 +153,12 @@ def generate(ctx, beamng_home, beamng_user, provider, strategy, prompt, repetiti
                 log.fatal("Refining strategy is not supported with OpenAI provider yet.")
                 sys.exit(2)
             case "ollama":
-                roadgpt_agent = RefiningAgent(map_size=MAP_SIZE)
+                roadgpt_agent = OllamaRefiningAgent(map_size=MAP_SIZE)
+            case "llama_cpp":
+                if model_path is None:
+                    log.fatal("You must provide a valid --model-path when using the 'llama_cpp' provider.")
+                    sys.exit(2)
+                roadgpt_agent = LlamaCppRefiningAgent(map_size=MAP_SIZE, model_path=model_path, verbose=verbose)
             case _:
                 log.fatal("Unknown provider %s", provider)
                 sys.exit(2)
