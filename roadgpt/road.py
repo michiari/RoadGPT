@@ -12,3 +12,10 @@ class RoadSegment(BaseModel):
     direction: Literal['left', 'right', 'straight'] = Field(..., description="Direction of the segment.")
     incline: int = Field(..., description="Incline angle in degrees (positive for uphill, negative for downhill, zero for flat).")
     turn_degrees: int = Field(..., description="Turn in degrees from the previous direction (positive/right, negative/left).")
+
+
+def road_start_to_dict(road_start: RoadStart) -> dict:
+    return {
+        'starting_point': (road_start.x, road_start.y, road_start.z),
+        'theta': road_start.theta
+    }

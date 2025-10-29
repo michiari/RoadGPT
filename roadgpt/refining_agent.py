@@ -1,33 +1,13 @@
-from langchain.agents import create_agent
-from langchain.messages import SystemMessage, HumanMessage, AIMessage
-from langchain.agents.middleware import wrap_model_call, ModelRequest, ModelResponse
-from langchain_ollama import ChatOllama
-from typing import Callable, Tuple
+from typing import Tuple
 
 from code_pipeline.validation import MIN_ELEVATION, ValidationResult, TestValidator
-from roadgpt.road import RoadStart, RoadSegment
 from roadgpt.road_generator import RoadGenerator
 
-
-@wrap_model_call
-def peek_output(
-    request: ModelRequest,
-    handler: Callable[[ModelRequest], ModelResponse]
-) -> ModelResponse:
-
-    print(request.messages)
-
-    return handler(request)
 
 class RefiningAgent:
 
     def __init__(self, map_size: int):
-        self.model = ChatOllama(
-            model="llama3.2",
-            temperature=0.6,
-        )
         self.validator = TestValidator(map_size)
-        self.segment_agent = None
 
 
     def prompt(self, prompt: str, max_attempts: int = 3) -> dict:
@@ -39,57 +19,55 @@ class RefiningAgent:
             segments.append(self._get_segment(prompt, starting_point, segments, max_attempts))
             print(segments[-1])
 
-        return self._to_dict(starting_point, segments)
+        starting_point['road_segments'] = segments
+        return starting_point
 
 
-    def _get_starting_point(self, prompt: str) -> RoadStart:
-        start_agent = create_agent(self.model, response_format=RoadStart)
+    def _get_starting_point(self, prompt: str) -> dict:
         messages = [
-            SystemMessage(content=RefiningAgent.agent_description),
-            SystemMessage(content=RefiningAgent.start_prompt),
-            HumanMessage(content=prompt)
+            { 'role': 'system', 'content': RefiningAgent.agent_description },
+            { 'role': 'system', 'content': RefiningAgent.start_prompt },
+            { 'role': 'user', 'content': prompt }
         ]
-        starting_point_result = start_agent.invoke({'messages': messages})
-        print('Starting point: ', starting_point_result['structured_response'])
-        return starting_point_result['structured_response']
+        starting_point_result = self._invoke_starting_point_agent(messages)
+        print('Starting point: ', starting_point_result)
+        return starting_point_result
 
 
-    def _get_segment(self, prompt: str, starting_point: RoadStart, previous_segments: list[RoadSegment], max_attempts: int) -> RoadSegment:
-        if self.segment_agent is None:
-            self.segment_agent = create_agent(self.model, response_format=RoadSegment) #, middleware=[peek_output])
+    def _get_segment(self, prompt: str, starting_point: dict, previous_segments: list[dict], max_attempts: int) -> dict:
         messages = [
-            SystemMessage(content=RefiningAgent.agent_description),
-            HumanMessage(content=prompt),
-            AIMessage(content=f"Starting point: {starting_point}."),
-            HumanMessage(content=RefiningAgent.segment_prompt)
+            { 'role': 'system', 'content': RefiningAgent.agent_description },
+            { 'role': 'user', 'content': prompt },
+            { 'role': 'assistant', 'content': f"Starting point: {starting_point}." },
+            { 'role': 'user', 'content': RefiningAgent.segment_prompt }
         ]
         if previous_segments:
             messages.extend([
-                AIMessage(content=f"Previously generated segments: {previous_segments}."),
-                HumanMessage(content=f"Remember that my prompt was: {prompt}. Please provide the next road segment.")
+                { 'role': 'assistant', 'content': f"Previously generated segments: {previous_segments}." },
+                { 'role': 'user', 'content': f"Remember that my prompt was: {prompt}. Please provide the next road segment." }
             ])
         else:
-            messages.append(HumanMessage(content="Please provide the first road segment."))
+            messages.append({ 'role': 'user', 'content': "Please provide the first road segment." })
 
-        segment_result = self.segment_agent.invoke({'messages': messages})
+        segment_result = self._invoke_segment_agent(messages)
         print(f"Segment result: {segment_result}")
-        segments = previous_segments + [segment_result['structured_response']]
+        segments = previous_segments + [segment_result]
 
-        is_valid, msg = self._validate(starting_point, segments)
+        is_valid, reason = self._validate(starting_point, segments)
         attempts = 0
         while not is_valid and attempts < max_attempts:
-            print("Segment generated an invalid road:", msg)
+            print("Segment generated an invalid road:", reason.value)
             print(f"Refining segment (attempt {attempts + 1})...")
             refinement_messages = messages + [
-                AIMessage(content=f"Previously generated segments: {segments}."),
-                HumanMessage(content=f"The previous segment resulted in an invalid road because {msg}. Please provide a corrected road segment.")
+                { 'role': 'assistant', 'content': f"Previously generated segments: {segments}." },
+                { 'role': 'user', 'content': f"The previous segment resulted in an invalid road because {self._get_correction_message(reason)}. Please provide a corrected road segment." }
             ]
-            refined_segment_result = self.segment_agent.invoke({'messages': refinement_messages})
+            refined_segment_result = self._invoke_segment_agent(refinement_messages)
             print(refined_segment_result)
-            segments[-1] = refined_segment_result['structured_response']
-            is_valid, msg = self._validate(starting_point, segments)
+            segments[-1] = refined_segment_result
+            is_valid, reason = self._validate(starting_point, segments)
             attempts += 1
-            print("After refinement, is the road valid?", is_valid, msg)
+            print("After refinement, is the road valid?", is_valid, reason.value)
 
         if not is_valid:
             raise ValueError(f"Failed to generate a valid road after refining the segment {max_attempts} times.")
@@ -97,20 +75,11 @@ class RefiningAgent:
         return segments[-1]
 
 
-    def _validate(self, starting_point: RoadStart, segments: list[RoadSegment]) -> Tuple[bool, str]:
-        partial_dict = self._to_dict(starting_point, segments)
-        self.road_generator = RoadGenerator(partial_dict['starting_point'], partial_dict['theta'], partial_dict['road_segments'])
+    def _validate(self, starting_point: dict, segments: list[dict]) -> Tuple[bool, str]:
+        self.road_generator = RoadGenerator(starting_point['starting_point'], starting_point['theta'], segments)
         self.road_generator.translate_to_nodes()
         road_test = self.road_generator.create_road_test()
         return self.validator.validate_test(road_test)
-
-
-    def _to_dict(self, starting_point: RoadStart, segments: list[RoadSegment]) -> dict:
-        return {
-            'starting_point': (starting_point.x, starting_point.y, starting_point.z),
-            'theta': starting_point.theta,
-            'road_segments': [segment.model_dump() for segment in segments]
-        }
 
 
     def _get_correction_message(self, validation_result: ValidationResult) -> str:
