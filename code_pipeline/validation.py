@@ -22,6 +22,7 @@ class ValidationResult(Enum):
     NOT_MINIMUM_LENGTH = "not_minimum_length"
     TOO_SHARP = "too_sharp"
     TOO_STEEP = "too_steep"
+    UNDERGROUND = "underground"
 
 
 def get_validation_message(result: ValidationResult) -> str:
