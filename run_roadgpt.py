@@ -183,31 +183,35 @@ def generate(ctx, beamng_home, beamng_user, provider, model_path, strategy, prom
         # Register the shutdown hook for post processing results
         register_exit_fun(create_post_processing_hook(ctx, result_folder, executor))
 
+        succeded_repetitions = 0
         if repetitions is None:
             user_repetitions = int(input("How many times do you want to create a road with that prompt? "))
         else:
             user_repetitions = repetitions
         for _ in range(user_repetitions):
-            segment_dict = roadgpt_agent.prompt(user_prompt)
-            print("LLM output:")
-            print(segment_dict)
-            starting_point = segment_dict["starting_point"]
-            theta = segment_dict["theta"]
-            segments = segment_dict["road_segments"]
-
-            generator = RoadGenerator(starting_point, theta, segments)
-            generator.translate_to_nodes()
             try:
+                segment_dict = roadgpt_agent.prompt(user_prompt)
+                print("LLM output:")
+                print(segment_dict)
+                starting_point = segment_dict["starting_point"]
+                theta = segment_dict["theta"]
+                segments = segment_dict["road_segments"]
+
+                generator = RoadGenerator(starting_point, theta, segments)
+                generator.translate_to_nodes()
+                
                 # Start the generation
                 generator.start(executor)
+                succeded_repetitions += 1
             except Exception:
                 log.fatal("An error occurred during test generation")
                 traceback.print_exc()
-                sys.exit(2)
             finally:
                 # Ensure the executor is stopped no matter what.
                 # TODO Consider using a ContextManager: With executor ... do
                 executor.close()
+
+        print(f"Successfully generated {succeded_repetitions} out of {user_repetitions} roads.")
 
         if prompt is None:
             user_prompt = input("Your road description (or exit): ")
