@@ -4,7 +4,7 @@ from langchain_openai import ChatOpenAI
 
 from roadgpt.schema import agent_description, road_schema_array
 
-class OpenAIAgent:
+class OpenAIChatAgent:
 
     def __init__(self):
         model = ChatOpenAI(

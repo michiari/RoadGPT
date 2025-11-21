@@ -25,28 +25,17 @@ Here are some ground rules:
 
 road_schema_array = {
     "type": "object",
+    "title": "road_description",
     "description": "Schema for road description",
-    "name": "road_description",
     "properties": {
         "starting_point": {
             "type": "array",
             "description": "The 3D coordinates of the starting point [x, y, z].",
-            "prefixItems": [
-            {
-                "type": "number",
-                "description": "X-coordinate of the starting point."
-            },
-            {
-                "type": "number",
-                "description": "Y-coordinate of the starting point."
-            },
-            {
-                "type": "number",
-                "description": "Z-coordinate of the starting point."
-            }
-            ],
             "items": {
-            "type": "number"
+                "type": "integer",
+                "description": "Coordinate value.",
+                "minItems": 3,
+                "maxItems": 3
             }
         },
         "theta": {

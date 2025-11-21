@@ -3,6 +3,7 @@ log = logging.getLogger(__name__)
 import json
 
 from roadgpt.refining_agent import RefiningAgent
+from roadgpt.road import starting_point_schema, segment_schema
 
 from llama_cpp import Llama
 
@@ -19,7 +20,7 @@ class LlamaCppRefiningAgent(RefiningAgent):
             temperature=self.temperature,
             response_format={
                 "type": "json_object",
-                "schema": LlamaCppRefiningAgent.starting_point_schema
+                "schema": starting_point_schema
             }
         )
         log.debug(starting_point_result)
@@ -33,62 +34,8 @@ class LlamaCppRefiningAgent(RefiningAgent):
             temperature=self.temperature,
             response_format={
                 "type": "json_object",
-                "schema": LlamaCppRefiningAgent.segment_schema
+                "schema": segment_schema
             }
         )
         log.debug(segment_result)
         return json.loads(segment_result['choices'][0]['message']['content'])
-
-
-    starting_point_schema = {
-        "type": "object",
-        "description": "Schema for the starting point of the road",
-        "name": "starting_point",
-        "properties": {
-            "starting_point": {
-                "type": "array",
-                "description": "The 3D coordinates of the starting point [x, y, z].",
-                "items": {
-                    "type": "integer",
-                    "description": "Coordinate value.",
-                    "minItems": 3,
-                    "maxItems": 3
-                }
-            },
-            "theta": {
-                "type": "integer",
-                "description": "Initial heading in degrees (azimuth/compass angle from the x-axis, in degrees)."
-            }
-        }
-    }
-
-    segment_schema = {
-        "type": "object",
-        "description": "A road segment",
-        "name": "road_segment",
-        "properties": {
-            "distance": {
-                "type": "integer",
-                "description": "Length of the segment in meters."
-            },
-            "direction": {
-                "type": "string",
-                "description": "Direction of the segment (one of 'left', 'right', 'straight')."
-            },
-            "incline": {
-                "type": "integer",
-                "description": "Incline angle in degrees (positive for uphill, negative for downhill, zero for flat)."
-            },
-            "turn_degrees": {
-                "type": "integer",
-                "description": "Turn in degrees from the previous direction (positive = right, negative = left)."
-            }
-        },
-        "required": [
-            "distance",
-            "direction",
-            "incline",
-            "turn_degrees"
-        ],
-        "additionalProperties": False
-    }

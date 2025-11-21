@@ -8,10 +8,12 @@ import sys
 import logging
 import csv
 
-from roadgpt.llamacpp_refining_agent import LlamaCppRefiningAgent
-from roadgpt.ollama_refining_agent import OllamaRefiningAgent
-from roadgpt.openai_agent import OpenAIAgent
+from roadgpt.openai_chat_agent import OpenAIChatAgent
 from roadgpt.ollama_chat_agent import OllamaChatAgent
+from roadgpt.llamacpp_chat_agent import LlamaCppChatAgent
+from roadgpt.openai_refining_agent import OpenAIRefiningAgent
+from roadgpt.ollama_refining_agent import OllamaRefiningAgent
+from roadgpt.llamacpp_refining_agent import LlamaCppRefiningAgent
 from roadgpt.road_generator import RoadGenerator
 
 from code_pipeline.beamng_executor import BeamngExecutor
@@ -138,20 +140,18 @@ def generate(ctx, beamng_home, beamng_user, provider, model_path, strategy, prom
     if strategy == "one-shot":
         match provider:
             case "openai":
-                roadgpt_agent = OpenAIAgent()
+                roadgpt_agent = OpenAIChatAgent()
             case "ollama":
                 roadgpt_agent = OllamaChatAgent()
             case "llama_cpp":
-                log.fatal("One-shot strategy is not supported with LlamaCpp provider yet.")
-                sys.exit(2)
+                roadgpt_agent = LlamaCppChatAgent(model_path=model_path, verbose=verbose)
             case _:
                 log.fatal("Unknown provider %s", provider)
                 sys.exit(2)
     else:  # refining
         match provider:
             case "openai":
-                log.fatal("Refining strategy is not supported with OpenAI provider yet.")
-                sys.exit(2)
+                roadgpt_agent = OpenAIRefiningAgent(map_size=MAP_SIZE)
             case "ollama":
                 roadgpt_agent = OllamaRefiningAgent(map_size=MAP_SIZE)
             case "llama_cpp":

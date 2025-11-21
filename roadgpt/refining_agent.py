@@ -12,7 +12,7 @@ class RefiningAgent:
         self.validator = TestValidator(map_size)
 
 
-    def prompt(self, prompt: str, max_attempts: int = 3) -> dict:
+    def prompt(self, prompt: str, max_attempts: int = 5) -> dict:
         starting_point = self._get_starting_point(prompt)
 
         segments = []

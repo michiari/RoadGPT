@@ -67,13 +67,14 @@ class RoadGenerator:
 
         # Send the test for execution
         test_outcome, description, execution_data = self.executor.execute_test(the_test)
-        # Plot the OOB_Percentage: How much the car is outside the road?
-        oob_percentage = [state.oob_percentage for state in execution_data]
-        log.info("Collected %d states information. Max is %.3f", len(oob_percentage), max(oob_percentage))
 
-        # # Print test outcome
+        # Print test outcome
         log.info("test_outcome %s", test_outcome)
         log.info("description %s", description)
+        if test_outcome in ["PASS", "FAIL"]:
+            # Plot the OOB_Percentage: How much the car is outside the road?
+            oob_percentage = [state.oob_percentage for state in execution_data]
+            log.info("Collected %d states information. Max is %.3f", len(oob_percentage), max(oob_percentage))
 
         import time
         time.sleep(10)
