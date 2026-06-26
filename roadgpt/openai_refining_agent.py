@@ -9,10 +9,13 @@ from roadgpt.road import starting_point_schema, segment_schema
 
 class OpenAIRefiningAgent(RefiningAgent):
 
-    def __init__(self, map_size: int):
+    def __init__(self, map_size: int, base_url=None, model="gpt-4.1"):
         super().__init__(map_size)
+        if model is None:
+            model = "gpt-4.1"
         self.model = ChatOpenAI(
-            model="gpt-4.1",
+            base_url=base_url,
+            model=model,
             temperature=1.0,
             max_tokens=None,
             timeout=None

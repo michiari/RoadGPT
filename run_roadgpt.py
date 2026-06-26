@@ -114,16 +114,16 @@ def get_script_path():
               help="Customize BeamNG executor by specifying the location of the folder "
                    "where levels, props, and other BeamNG-related data will be copied."
                    "** Use this to avoid spaces in URL/PATHS! **")
-@click.option('--provider', required=False, type=click.Choice(["openai", "ollama", "llama_cpp"], case_sensitive=False), default="openai")
-@click.option('--model-path', required=False, default=None, type=str,
-              help="Path to the local LLaMA.cpp model file. Required if provider is 'llama_cpp'.")
+@click.option('--provider', required=False, type=click.Choice(["openai", "ollama", "llama_cpp", "openrouter"], case_sensitive=False), default="openai")
+@click.option('--model', required=False, default=None, type=str,
+              help="Model name for OpenAI and OpenRouter providers, or path to the local LLaMA.cpp model file for llama_cpp. Required if provider is 'llama_cpp'.")
 @click.option('--strategy', required=False, type=click.Choice(["one-shot", "refining"], case_sensitive=False), default="refining")
 @click.option('--prompt', required=False, default=None, type=str)
 @click.option('--repetitions', required=False, default=None, type=int,
               help="Number of times roads are generated with the given prompt.")
 @click.option('--verbose', is_flag=True, help="Enables verbose logging.")
 @click.pass_context
-def generate(ctx, beamng_home, beamng_user, provider, model_path, strategy, prompt, repetitions, verbose):
+def generate(ctx, beamng_home, beamng_user, provider, model, strategy, prompt, repetitions, verbose):
     ctx.ensure_object(dict)
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
@@ -140,25 +140,29 @@ def generate(ctx, beamng_home, beamng_user, provider, model_path, strategy, prom
     if strategy == "one-shot":
         match provider:
             case "openai":
-                roadgpt_agent = OpenAIChatAgent()
+                roadgpt_agent = OpenAIChatAgent(model=model)
             case "ollama":
                 roadgpt_agent = OllamaChatAgent()
             case "llama_cpp":
-                roadgpt_agent = LlamaCppChatAgent(model_path=model_path, verbose=verbose)
+                roadgpt_agent = LlamaCppChatAgent(model_path=model, verbose=verbose)
+            case "openrouter":
+                roadgpt_agent = OpenAIChatAgent(base_url="https://openrouter.ai/api/v1", model=model)
             case _:
                 log.fatal("Unknown provider %s", provider)
                 sys.exit(2)
     else:  # refining
         match provider:
             case "openai":
-                roadgpt_agent = OpenAIRefiningAgent(map_size=MAP_SIZE)
+                roadgpt_agent = OpenAIRefiningAgent(map_size=MAP_SIZE, model=model)
             case "ollama":
                 roadgpt_agent = OllamaRefiningAgent(map_size=MAP_SIZE)
             case "llama_cpp":
                 if model_path is None:
                     log.fatal("You must provide a valid --model-path when using the 'llama_cpp' provider.")
                     sys.exit(2)
-                roadgpt_agent = LlamaCppRefiningAgent(map_size=MAP_SIZE, model_path=model_path, verbose=verbose)
+                roadgpt_agent = LlamaCppRefiningAgent(map_size=MAP_SIZE, model_path=model, verbose=verbose)
+            case "openrouter":
+                roadgpt_agent = OpenAIRefiningAgent(map_size=MAP_SIZE, base_url="https://openrouter.ai/api/v1", model=model)
             case _:
                 log.fatal("Unknown provider %s", provider)
                 sys.exit(2)
